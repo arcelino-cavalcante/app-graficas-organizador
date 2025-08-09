@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Pedidos - Gráfica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bibliotecas para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container {
+            flex-grow: 1;
+        }
+
+        #message-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            transition: opacity 0.5s, transform 0.5s;
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+
+        #message-box.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Esconde os formulários de item por padrão */
+        .item-form {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8">
+        <header class="text-center mb-10">
+            <div class="flex justify-center items-center gap-4 mb-2">
+                <img id="header-logo" src="" alt="Logo da Gráfica" class="h-12 hidden">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Gerador de Pedidos para Gráfica</h1>
+            </div>
+            <div class="flex justify-center items-center gap-4">
+                <p class="text-gray-600">Preencha os dados e gere o PDF do seu pedido.</p>
+                <button id="how-to-use-button"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm flex items-center gap-1 px-3 py-1 rounded-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Como Usar
+                </button>
+            </div>
+        </header>
+
+        <!-- Caixa de Mensagem Customizada -->
+        <div id="message-box" class="p-4 rounded-md shadow-lg text-white"></div>
+
+        <!-- Visão do Cliente -->
+        <div id="client-view">
+            <!-- Seção de Novo Pedido -->
+            <div id="form-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg mb-6">
+                <div class="flex justify-between items-center mb-6 border-b pb-3">
+                    <h2 class="text-2xl font-bold">📝 Informações do Pedido</h2>
+                    <button id="loadLastOrderButton"
+                        class="hidden bg-gray-200 text-gray-700 hover:bg-gray-300 font-bold py-2 px-4 rounded-lg transition text-sm flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Carregar Último Pedido
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label for="clientName" class="block text-sm font-medium text-gray-700 mb-2">Cliente (Escola,
+                            Empresa, etc.):</label>
+                        <input type="text" id="clientName"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Ex: Colégio São José">
+                    </div>
+                    <div>
+                        <label for="orderName" class="block text-sm font-medium text-gray-700 mb-2">Nome do Pedido
+                            (Opcional):</label>
+                        <input type="text" id="orderName"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Ex: Fardas Conclusão 2025">
+                    </div>
+                    <div>
+                        <label for="responsibleName" class="block text-sm font-medium text-gray-700 mb-2">Nome do
+                            Responsável:</label>
+                        <input type="text" id="responsibleName"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Ex: João da Silva">
+                    </div>
+                    <div>
+                        <label for="whatsappNumber" class="block text-sm font-medium text-gray-700 mb-2">Nº de
+                            WhatsApp:</label>
+                        <input type="tel" id="whatsappNumber"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="(99) 99999-9999">
+                    </div>
+                    <div>
+                        <label for="orderNumber" class="block text-sm font-medium text-gray-700 mb-2">Nº do
+                            Pedido:</label>
+                        <input type="text" id="orderNumber"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                        <div>
+                            <h3 class="text-lg font-semibold">Adicionar Itens ao Pedido</h3>
+                            <div class="mt-2">
+                                <label for="orderType" class="block text-sm font-medium text-gray-700">Tipo de
+                                    Pedido:</label>
+                                <select id="orderType"
+                                    class="w-full sm:w-auto mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="individual">Itens Individuais (com nome)</option>
+                                    <option value="group">Itens em Grupo (por quantidade)</option>
+                                    <option value="sports">Uniformes Esportivos (nome e número)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="openImportModalButton"
+                            class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg transition text-sm flex items-center gap-2 self-start sm:self-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Importar Nomes
+                        </button>
+                    </div>
+
+                    <!-- Formulário para Itens Individuais -->
+                    <div id="form-individual" class="item-form grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div class="md:col-span-2">
+                            <label for="nameOnShirt" class="block text-sm font-medium text-gray-700 mb-1">Nome (será
+                                salvo em maiúsculas):</label>
+                            <input type="text" id="nameOnShirt"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                placeholder="Ex: MARIA, PEDRO, ANA">
+                        </div>
+                        <div>
+                            <label for="shirtSize" class="block text-sm font-medium text-gray-700 mb-1">Tamanho:</label>
+                            <select id="shirtSize" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="collarType" class="block text-sm font-medium text-gray-700 mb-1">Tipo de
+                                Gola:</label>
+                            <select id="collarType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Formulário para Itens em Grupo -->
+                    <div id="form-group" class="item-form grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div class="md:col-span-2">
+                            <label for="itemDescription" class="block text-sm font-medium text-gray-700 mb-1">Descrição
+                                do Item:</label>
+                            <input type="text" id="itemDescription"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                placeholder="Ex: Jaleco Branco, Farda Cinza">
+                        </div>
+                        <div>
+                            <label for="itemQuantity"
+                                class="block text-sm font-medium text-gray-700 mb-1">Quantidade:</label>
+                            <input type="number" id="itemQuantity"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md" min="1" value="1">
+                        </div>
+                        <div>
+                            <label for="groupShirtSize"
+                                class="block text-sm font-medium text-gray-700 mb-1">Tamanho:</label>
+                            <select id="groupShirtSize" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Formulário para Uniformes Esportivos -->
+                    <div id="form-sports" class="item-form grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                        <div class="md:col-span-2">
+                            <label for="sportsName" class="block text-sm font-medium text-gray-700 mb-1">Nome
+                                (Opcional):</label>
+                            <input type="text" id="sportsName"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Ex: NEYMAR JR.">
+                        </div>
+                        <div>
+                            <label for="sportsNumber"
+                                class="block text-sm font-medium text-gray-700 mb-1">Número:</label>
+                            <input type="number" id="sportsNumber"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Ex: 10">
+                        </div>
+                        <div>
+                            <label for="sportsShirtSize" class="block text-sm font-medium text-gray-700 mb-1">Tam.
+                                Camisa:</label>
+                            <select id="sportsShirtSize" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="sportsShortSize" class="block text-sm font-medium text-gray-700 mb-1">Tam.
+                                Short:</label>
+                            <select id="sportsShortSize" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="sportsCollarType"
+                                class="block text-sm font-medium text-gray-700 mb-1">Gola:</label>
+                            <select id="sportsCollarType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                    </div>
+
+
+                    <div class="text-right mt-4">
+                        <button id="addItemButton"
+                            class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">Adicionar
+                            Item</button>
+                    </div>
+                </div>
+
+                <!-- Itens do Pedido Atual -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-4">Itens do Pedido Atual</h3>
+
+                    <div id="order-summary" class="bg-blue-50 p-4 rounded-lg mb-4 hidden"></div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border rounded-lg">
+                            <thead id="current-order-head" class="bg-gray-50">
+                                <!-- Cabeçalho gerado via JavaScript -->
+                            </thead>
+                            <tbody id="current-order-items" class="divide-y divide-gray-200">
+                                <tr id="empty-row">
+                                    <td colspan="6" class="text-center py-6 text-gray-500">Nenhum item adicionado ainda.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center border-t pt-6">
+                    <button id="generatePdfButton"
+                        class="w-full md:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-12 rounded-lg text-lg transition-transform transform hover:scale-105 flex items-center justify-center mx-auto gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Gerar Tabela de Pedidos (PDF)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer id="page-footer" class="bg-gray-800 text-white mt-auto py-8">
+        <div class="container mx-auto px-4 sm:px-6 md:p-8 text-center md:text-left">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h4 id="footer-company-name" class="text-lg font-bold mb-2"></h4>
+                    <p id="footer-address" class="text-gray-400 text-sm"></p>
+                    <p id="footer-whatsapp" class="text-gray-400 text-sm mt-1"></p>
+                </div>
+                <div class="flex items-center justify-center">
+                    <p id="footer-phrase" class="text-gray-500 italic"></p>
+                </div>
+                <div class="text-center md:text-right">
+                    <h5 class="text-md font-semibold mb-2">Sistema desenvolvido por:</h5>
+                    <p id="developer-info" class="text-gray-400 text-sm"></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal de Edição de Item (agora dinâmico) -->
+    <div id="edit-item-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h3 class="text-xl font-bold mb-6">Editar Item</h3>
+            <div id="edit-form-container" class="space-y-4">
+                <!-- Campos de edição serão injetados aqui pelo JS -->
+            </div>
+            <div class="mt-8 flex justify-end gap-4">
+                <button id="cancel-edit-button"
+                    class="px-6 py-2 rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 transition">Cancelar</button>
+                <button id="save-edit-button"
+                    class="px-6 py-2 rounded-lg text-white bg-blue-500 hover:bg-blue-600 transition">Salvar
+                    Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Importação de Nomes -->
+    <div id="import-names-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h3 class="text-xl font-bold mb-4">Importar em Massa</h3>
+            <p class="text-gray-600 mb-6">Cole a lista abaixo (um por linha). Todos serão adicionados com os tamanhos e
+                gola padrão selecionados.</p>
+            <div class="space-y-4">
+                <div>
+                    <label for="import-names-list" class="block text-sm font-medium text-gray-700">Lista de Nomes (ou
+                        Nomes;Números para esportivo):</label>
+                    <textarea id="import-names-list" rows="8"
+                        class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Ex (Individual):&#10;JOÃO SILVA&#10;MARIA OLIVEIRA&#10;&#10;Ex (Esportivo):&#10;GABRIEL;10&#10;ARTHUR;14"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="import-shirtSize" class="block text-sm font-medium text-gray-700">Tam. Camisa
+                            Padrão</label>
+                        <select id="import-shirtSize"
+                            class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"></select>
+                    </div>
+                    <div>
+                        <label for="import-shortSize" class="block text-sm font-medium text-gray-700">Tam. Short
+                            Padrão</label>
+                        <select id="import-shortSize"
+                            class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"></select>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label for="import-collarType" class="block text-sm font-medium text-gray-700">Gola Padrão</label>
+                    <select id="import-collarType"
+                        class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"></select>
+                </div>
+            </div>
+            <div class="mt-8 flex justify-end gap-4">
+                <button id="cancel-import-button"
+                    class="px-6 py-2 rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 transition">Cancelar</button>
+                <button id="import-names-button"
+                    class="px-6 py-2 rounded-lg text-white bg-teal-500 hover:bg-teal-600 transition">Adicionar
+                    Itens</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Como Usar -->
+    <div id="how-to-use-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold">Como Usar o Sistema de Pedidos</h3>
+                <button id="close-how-to-use-modal" class="text-gray-500 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-6 text-gray-700">
+                <div>
+                    <h4 class="text-lg font-semibold mb-2 border-b pb-2">Passo 1: Informações do Pedido</h4>
+                    <p>Preencha os dados iniciais do seu pedido. Eles aparecerão no cabeçalho do PDF.</p>
+                    <ul class="list-disc list-inside mt-2 space-y-1">
+                        <li><strong>Cliente:</strong> O nome da empresa, escola ou grupo para quem é o pedido.</li>
+                        <li><strong>Nome do Pedido:</strong> Um nome para identificar o trabalho (ex: "Uniformes Time
+                            A"). É opcional.</li>
+                        <li><strong>Responsável:</strong> Nome da pessoa de contato.</li>
+                        <li><strong>WhatsApp:</strong> Contato do responsável para facilitar a comunicação.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold mb-2 border-b pb-2">Passo 2: Escolha o Tipo de Pedido</h4>
+                    <p>Selecione o tipo de produto que você está orçando. O formulário de adição de itens mudará de
+                        acordo com a sua escolha.</p>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold mb-2 border-b pb-2">Passo 3: Adicione os Itens</h4>
+                    <p>Use o formulário para adicionar os itens um por um na tabela. Existem 3 tipos:</p>
+                    <ul class="list-disc list-inside mt-2 space-y-2">
+                        <li>
+                            <strong>Itens Individuais:</strong> Ideal para fardamentos com nome, como jalecos ou camisas
+                            de eventos.
+                            <ul class="list-circle list-inside ml-4">
+                                <li><strong>Campos:</strong> Nome na Camisa, Tamanho, Tipo de Gola.</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <strong>Itens em Grupo:</strong> Perfeito para pedidos onde os itens são iguais e não levam
+                            nomes individuais.
+                            <ul class="list-circle list-inside ml-4">
+                                <li><strong>Campos:</strong> Descrição (ex: "Farda Cinza"), Quantidade, Tamanho.</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <strong>Uniformes Esportivos:</strong> Para times, com campos para nome e número.
+                            <ul class="list-circle list-inside ml-4">
+                                <li><strong>Campos:</strong> Nome do Atleta (opcional), Número, Tam. Camisa, Tam. Short,
+                                    Gola.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold mb-2 border-b pb-2">Funcionalidades Extras</h4>
+                    <ul class="list-disc list-inside mt-2 space-y-1">
+                        <li><strong>Importar Nomes:</strong> Para pedidos individuais ou esportivos, você pode colar uma
+                            lista de nomes (e números) para adicionar vários itens de uma só vez.</li>
+                        <li><strong>Carregar Último Pedido:</strong> Recupera os dados do último PDF que você gerou,
+                            facilitando edições.</li>
+                        <li><strong>Editar/Remover:</strong> Use os ícones de lápis e lixeira na tabela para modificar
+                            ou excluir um item.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold mb-2 border-b pb-2">Passo 4: Gerar o PDF</h4>
+                    <p>Após adicionar todos os itens, clique no botão "Gerar Tabela de Pedidos (PDF)". O arquivo será
+                        gerado e baixado automaticamente, pronto para ser enviado para a produção!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // --- CONFIGURAÇÕES DA GRÁFICA (EDITAR AQUI) ---
+        const companyName = "Sua Gráfica Express";
+        const logoUrl = "https://placehold.co/200x60/1a202c/FFFFFF.png?text=SEU+LOGO";
+        const companyAddress = "Rua das Estampas, 123 - Bairro Central, Cidade - UF";
+        const companyWhatsapp = "(99) 99999-9999";
+        const companyPhrase = "Qualidade e precisão em cada detalhe.";
+        const developerInfo = "Seu Nome / Sua Empresa | contato@email.com";
+        const SIZES = ['Infantil 8', 'Infantil 10', 'Infantil 12', 'P', 'M', 'G', 'GG', 'XG', 'XGG'];
+        const COLLARS = ['Gola Redonda', 'Gola V', 'Gola Polo'];
+        // --- FIM DAS CONFIGURAÇÕES ---
+
+        // Estado da aplicação
+        let currentOrderItems = [];
+        let editingItemId = null;
+
+        // --- Elementos do DOM ---
+        const getEl = (id) => document.getElementById(id);
+        const headerLogo = getEl('header-logo');
+        const clientNameInput = getEl('clientName');
+        const orderNameInput = getEl('orderName');
+        const orderNumberInput = getEl('orderNumber');
+        const responsibleNameInput = getEl('responsibleName');
+        const whatsappNumberInput = getEl('whatsappNumber');
+        const addItemButton = getEl('addItemButton');
+        const generatePdfButton = getEl('generatePdfButton');
+        const currentOrderHead = getEl('current-order-head');
+        const currentOrderItemsTbody = getEl('current-order-items');
+        const messageBox = getEl('message-box');
+        const emptyRow = getEl('empty-row');
+        const orderSummaryDiv = getEl('order-summary');
+        const loadLastOrderButton = getEl('loadLastOrderButton');
+        const orderTypeSelect = getEl('orderType');
+
+        // Inputs dos formulários de item
+        const formIndividual = getEl('form-individual');
+        const nameOnShirtInput = getEl('nameOnShirt');
+        const shirtSizeSelect = getEl('shirtSize');
+        const collarTypeSelect = getEl('collarType');
+
+        const formGroup = getEl('form-group');
+        const itemDescriptionInput = getEl('itemDescription');
+        const itemQuantityInput = getEl('itemQuantity');
+        const groupShirtSizeSelect = getEl('groupShirtSize');
+
+        const formSports = getEl('form-sports');
+        const sportsNameInput = getEl('sportsName');
+        const sportsNumberInput = getEl('sportsNumber');
+        const sportsShirtSizeSelect = getEl('sportsShirtSize');
+        const sportsShortSizeSelect = getEl('sportsShortSize');
+        const sportsCollarTypeSelect = getEl('sportsCollarType');
+
+        // Modal de Edição
+        const editItemModal = getEl('edit-item-modal');
+        const editFormContainer = getEl('edit-form-container');
+        const cancelEditButton = getEl('cancel-edit-button');
+        const saveEditButton = getEl('save-edit-button');
+
+        // Modal de Importação
+        const openImportModalButton = getEl('openImportModalButton');
+        const importNamesModal = getEl('import-names-modal');
+        const importNamesList = getEl('import-names-list');
+        const importShirtSize = getEl('import-shirtSize');
+        const importShortSize = getEl('import-shortSize');
+        const importCollarType = getEl('import-collarType');
+        const cancelImportButton = getEl('cancel-import-button');
+        const importNamesButton = getEl('import-names-button');
+
+        // Modal Como Usar
+        const howToUseButton = getEl('how-to-use-button');
+        const howToUseModal = getEl('how-to-use-modal');
+        const closeHowToUseModalButton = getEl('close-how-to-use-modal');
+
+        // --- Funções de UI ---
+
+        function showMessage(text, type = 'info') {
+            messageBox.textContent = text;
+            messageBox.className = 'p-4 rounded-md shadow-lg text-white '; // Reset classes
+            if (type === 'success') messageBox.classList.add('bg-green-500');
+            else if (type === 'error') messageBox.classList.add('bg-red-500');
+            else messageBox.classList.add('bg-blue-500');
+            messageBox.classList.add('show');
+            setTimeout(() => { messageBox.classList.remove('show'); }, 4000);
+        }
+
+        function populateSelect(selectElement, options) {
+            selectElement.innerHTML = '';
+            options.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = option;
+                selectElement.appendChild(opt);
+            });
+        }
+
+        function switchOrderType() {
+            const type = orderTypeSelect.value;
+
+            // Esconde todos os formulários
+            formIndividual.style.display = 'none';
+            formGroup.style.display = 'none';
+            formSports.style.display = 'none';
+            openImportModalButton.style.display = 'none';
+
+            let headers = [];
+
+            // Mostra o formulário correto e define os cabeçalhos da tabela
+            switch (type) {
+                case 'individual':
+                    formIndividual.style.display = 'grid';
+                    openImportModalButton.style.display = 'flex';
+                    headers = ['Nome na Camisa', 'Tamanho', 'Tipo de Gola', 'Ações'];
+                    break;
+                case 'group':
+                    formGroup.style.display = 'grid';
+                    headers = ['Descrição', 'Tamanho', 'Quantidade', 'Ações'];
+                    break;
+                case 'sports':
+                    formSports.style.display = 'grid';
+                    openImportModalButton.style.display = 'flex';
+                    headers = ['Nome', 'Número', 'Tam. Camisa', 'Tam. Short', 'Gola', 'Ações'];
+                    break;
+            }
+
+            // Atualiza o cabeçalho da tabela
+            currentOrderHead.innerHTML = `<tr>${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${h === 'Ações' ? 'text-center' : ''}">${h}</th>`).join('')}</tr>`;
+
+            // Limpa a linha de "vazio" para ter o colspan correto
+            emptyRow.querySelector('td').setAttribute('colspan', headers.length);
+
+            // Se já existem itens e o tipo mudou, avisa o usuário
+            if (currentOrderItems.length > 0 && currentOrderItems[0].type !== type) {
+                if (confirm('Mudar o tipo de pedido irá limpar os itens atuais. Deseja continuar?')) {
+                    currentOrderItems = [];
+                    renderCurrentOrder();
+                    saveDataToLocalStorage();
+                } else {
+                    // Reverte a seleção se o usuário cancelar
+                    orderTypeSelect.value = currentOrderItems[0].type;
+                    switchOrderType(); // Chama de novo para restaurar o estado visual
+                }
+            }
+        }
+
+        // --- Funções de Lógica de Pedido ---
+
+        function generateOrderNumber() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const randomSuffix = Math.floor(100 + Math.random() * 900);
+            orderNumberInput.value = `${year}${month}${day}-${randomSuffix}`;
+        }
+
+        function renderCurrentOrder() {
+            currentOrderItemsTbody.innerHTML = '';
+
+            if (currentOrderItems.length === 0) {
+                currentOrderItemsTbody.appendChild(emptyRow);
+                generatePdfButton.disabled = true;
+                orderSummaryDiv.classList.add('hidden');
+                return;
+            }
+
+            generatePdfButton.disabled = false;
+            orderSummaryDiv.classList.remove('hidden');
+
+            let totalItems = 0;
+            const sizeCounts = currentOrderItems.reduce((acc, item) => {
+                const quantity = item.quantity || 1;
+                totalItems += quantity;
+                acc[item.size] = (acc[item.size] || 0) + quantity;
+                if (item.shortSize) { // Adiciona contagem para shorts
+                    acc[item.shortSize] = (acc[item.shortSize] || 0) + quantity;
+                }
+                return acc;
+            }, {});
+
+            const sortedSizes = Object.keys(sizeCounts).sort((a, b) => SIZES.indexOf(a) - SIZES.indexOf(b));
+
+            let summaryHtml = `<h4 class="font-bold text-lg mb-2">Resumo do Pedido</h4>`;
+            summaryHtml += `<p class="mb-3"><span class="font-semibold">Total de Itens:</span> ${totalItems}</p>`;
+            summaryHtml += `<div class="flex flex-wrap gap-x-4 gap-y-2">`;
+            sortedSizes.forEach(size => {
+                summaryHtml += `<span class="bg-blue-200 text-blue-800 text-sm font-semibold px-2.5 py-1 rounded-full">${size}: ${sizeCounts[size]}</span>`;
+            });
+            summaryHtml += `</div>`;
+            orderSummaryDiv.innerHTML = summaryHtml;
+
+            currentOrderItems.forEach(item => {
+                const tr = document.createElement('tr');
+                let cells = '';
+                switch (item.type) {
+                    case 'individual':
+                        cells = `
+                            <td class="px-6 py-4 whitespace-nowrap font-medium">${item.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.size}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.collar}</td>
+                        `;
+                        break;
+                    case 'group':
+                        cells = `
+                            <td class="px-6 py-4 whitespace-nowrap font-medium">${item.description}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.size}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.quantity}</td>
+                        `;
+                        break;
+                    case 'sports':
+                        cells = `
+                            <td class="px-6 py-4 whitespace-nowrap font-medium">${item.name || '---'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.number}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.size}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.shortSize || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${item.collar}</td>
+                        `;
+                        break;
+                }
+
+                tr.innerHTML = cells + `
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <div class="flex justify-center items-center gap-4">
+                            <button data-id="${item.id}" class="edit-item-btn text-blue-500 hover:text-blue-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                            </button>
+                            <button data-id="${item.id}" class="remove-item-btn text-red-500 hover:text-red-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                currentOrderItemsTbody.appendChild(tr);
+            });
+        }
+
+        function handleAddItem() {
+            const type = orderTypeSelect.value;
+            let newItem = { id: Date.now(), type };
+
+            switch (type) {
+                case 'individual':
+                    const name = nameOnShirtInput.value.trim().toUpperCase();
+                    if (!name) { showMessage('Por favor, preencha o nome.', 'error'); return; }
+                    newItem = { ...newItem, name, size: shirtSizeSelect.value, collar: collarTypeSelect.value };
+                    nameOnShirtInput.value = '';
+                    nameOnShirtInput.focus();
+                    break;
+                case 'group':
+                    const description = itemDescriptionInput.value.trim();
+                    const quantity = parseInt(itemQuantityInput.value, 10);
+                    if (!description) { showMessage('Por favor, preencha a descrição do item.', 'error'); return; }
+                    if (isNaN(quantity) || quantity < 1) { showMessage('A quantidade deve ser um número maior que zero.', 'error'); return; }
+                    newItem = { ...newItem, description, quantity, size: groupShirtSizeSelect.value };
+                    itemDescriptionInput.value = '';
+                    itemQuantityInput.value = '1';
+                    itemDescriptionInput.focus();
+                    break;
+                case 'sports':
+                    const sportName = sportsNameInput.value.trim().toUpperCase();
+                    const sportNumber = sportsNumberInput.value.trim();
+                    if (!sportNumber) { showMessage('O número do uniforme é obrigatório.', 'error'); return; }
+                    newItem = { ...newItem, name: sportName, number: sportNumber, size: sportsShirtSizeSelect.value, shortSize: sportsShortSizeSelect.value, collar: sportsCollarTypeSelect.value };
+                    sportsNameInput.value = '';
+                    sportsNumberInput.value = '';
+                    sportsNameInput.focus();
+                    break;
+            }
+
+            currentOrderItems.push(newItem);
+            renderCurrentOrder();
+            saveDataToLocalStorage();
+        }
+
+        function handleTableActions(event) {
+            const button = event.target.closest('button');
+            if (!button) return;
+
+            const itemId = Number(button.dataset.id);
+
+            if (button.classList.contains('remove-item-btn')) {
+                currentOrderItems = currentOrderItems.filter(item => item.id !== itemId);
+                renderCurrentOrder();
+                saveDataToLocalStorage();
+            } else if (button.classList.contains('edit-item-btn')) {
+                openEditModal(itemId);
+            }
+        }
+
+        function openEditModal(itemId) {
+            const itemToEdit = currentOrderItems.find(item => item.id === itemId);
+            if (!itemToEdit) return;
+
+            editingItemId = itemId;
+            editFormContainer.innerHTML = ''; // Limpa o formulário anterior
+            let formHtml = '';
+
+            // Cria os selects de tamanho e gola para reutilização
+            const createSelect = (id, label, options, selectedValue) => {
+                let optionsHtml = options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('');
+                return `<div><label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label><select id="${id}" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">${optionsHtml}</select></div>`;
+            };
+
+            const createInput = (id, label, type, value, placeholder = '') => {
+                return `<div><label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label><input type="${type}" id="${id}" value="${value}" placeholder="${placeholder}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"></div>`;
+            }
+
+            switch (itemToEdit.type) {
+                case 'individual':
+                    formHtml += createInput('edit-name', 'Nome na Camisa', 'text', itemToEdit.name);
+                    formHtml += createSelect('edit-size', 'Tamanho', SIZES, itemToEdit.size);
+                    formHtml += createSelect('edit-collar', 'Tipo de Gola', COLLARS, itemToEdit.collar);
+                    break;
+                case 'group':
+                    formHtml += createInput('edit-description', 'Descrição', 'text', itemToEdit.description);
+                    formHtml += createInput('edit-quantity', 'Quantidade', 'number', itemToEdit.quantity);
+                    formHtml += createSelect('edit-size', 'Tamanho', SIZES, itemToEdit.size);
+                    break;
+                case 'sports':
+                    formHtml += createInput('edit-sports-name', 'Nome', 'text', itemToEdit.name || '');
+                    formHtml += createInput('edit-sports-number', 'Número', 'text', itemToEdit.number);
+                    formHtml += createSelect('edit-size', 'Tam. Camisa', SIZES, itemToEdit.size);
+                    formHtml += createSelect('edit-short-size', 'Tam. Short', SIZES, itemToEdit.shortSize);
+                    formHtml += createSelect('edit-collar', 'Tipo de Gola', COLLARS, itemToEdit.collar);
+                    break;
+            }
+            editFormContainer.innerHTML = formHtml;
+            editItemModal.classList.remove('hidden');
+        }
+
+        function handleSaveChanges() {
+            const itemIndex = currentOrderItems.findIndex(item => item.id === editingItemId);
+            if (itemIndex === -1) return;
+
+            const item = currentOrderItems[itemIndex];
+
+            try {
+                switch (item.type) {
+                    case 'individual':
+                        const newName = getEl('edit-name').value.trim().toUpperCase();
+                        if (!newName) throw new Error('O nome não pode ficar em branco.');
+                        item.name = newName;
+                        item.size = getEl('edit-size').value;
+                        item.collar = getEl('edit-collar').value;
+                        break;
+                    case 'group':
+                        const newDesc = getEl('edit-description').value.trim();
+                        const newQty = parseInt(getEl('edit-quantity').value, 10);
+                        if (!newDesc) throw new Error('A descrição não pode ficar em branco.');
+                        if (isNaN(newQty) || newQty < 1) throw new Error('A quantidade deve ser maior que zero.');
+                        item.description = newDesc;
+                        item.quantity = newQty;
+                        item.size = getEl('edit-size').value;
+                        break;
+                    case 'sports':
+                        const newSportName = getEl('edit-sports-name').value.trim().toUpperCase();
+                        const newSportNumber = getEl('edit-sports-number').value.trim();
+                        if (!newSportNumber) throw new Error('O número é obrigatório.');
+                        item.name = newSportName;
+                        item.number = newSportNumber;
+                        item.size = getEl('edit-size').value;
+                        item.shortSize = getEl('edit-short-size').value;
+                        item.collar = getEl('edit-collar').value;
+                        break;
+                }
+
+                renderCurrentOrder();
+                saveDataToLocalStorage();
+                closeEditModal();
+            } catch (error) {
+                showMessage(error.message, 'error');
+            }
+        }
+
+        function closeEditModal() {
+            editingItemId = null;
+            editItemModal.classList.add('hidden');
+        }
+
+        function handleImportNames() {
+            const type = orderTypeSelect.value;
+            const names = importNamesList.value.split('\n').filter(line => line.trim() !== '');
+            if (names.length === 0) {
+                showMessage('Por favor, cole uma lista de itens.', 'error');
+                return;
+            }
+
+            const defaultShirtSize = importShirtSize.value;
+            const defaultShortSize = importShortSize.value;
+            const defaultCollar = importCollarType.value;
+
+            names.forEach(line => {
+                const randomId = Date.now() + Math.random();
+                let newItem = null;
+
+                if (type === 'individual') {
+                    newItem = {
+                        id: randomId, type: 'individual',
+                        name: line.trim().toUpperCase(),
+                        size: defaultShirtSize, collar: defaultCollar
+                    };
+                } else if (type === 'sports') {
+                    const parts = line.split(';').map(p => p.trim());
+                    const name = parts[0].toUpperCase();
+                    const number = parts[1] || 'S/N';
+                    newItem = {
+                        id: randomId, type: 'sports',
+                        name: name, number: number,
+                        size: defaultShirtSize, shortSize: defaultShortSize, collar: defaultCollar
+                    };
+                }
+
+                if (newItem) currentOrderItems.push(newItem);
+            });
+
+            renderCurrentOrder();
+            saveDataToLocalStorage();
+            closeImportModal();
+            showMessage(`${names.length} itens importados com sucesso!`, 'success');
+        }
+
+        function openImportModal() {
+            importNamesList.value = '';
+            importNamesModal.classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            importNamesModal.classList.add('hidden');
+        }
+
+        async function imageToBase64(url) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (error) {
+                console.error("Erro ao converter imagem para Base64:", error);
+                return null;
+            }
+        }
+
+        async function handleGeneratePdf() {
+            const clientName = clientNameInput.value.trim();
+            const orderName = orderNameInput.value.trim();
+            const responsibleName = responsibleNameInput.value.trim();
+            const whatsappNumber = whatsappNumberInput.value.trim();
+
+            if (!clientName || !responsibleName || !whatsappNumber || currentOrderItems.length === 0) {
+                showMessage('Preencha todas as informações do cliente e adicione itens antes de gerar o PDF.', 'error');
+                return;
+            }
+
+            saveLastGeneratedOrder();
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const orderNumber = orderNumberInput.value;
+            const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+            const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+            let finalY = 0;
+
+            // Cabeçalho do PDF
+            const headerStartY = 15;
+            if (logoUrl) {
+                try {
+                    const logoBase64 = await imageToBase64(logoUrl);
+                    if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, headerStartY, 50, 15);
+                    else doc.setFontSize(16).setFont("helvetica", "bold").text(companyName, 14, headerStartY + 10);
+                } catch (e) {
+                    doc.setFontSize(16).setFont("helvetica", "bold").text(companyName, 14, headerStartY + 10);
+                }
+            } else {
+                doc.setFontSize(16).setFont("helvetica", "bold").text(companyName, 14, headerStartY + 10);
+            }
+            doc.setFontSize(20).setFont("helvetica", "bold").text("Ordem de Produção", pageWidth - 14, headerStartY + 10, { align: 'right' });
+            doc.setLineWidth(0.5).line(14, headerStartY + 20, pageWidth - 14, headerStartY + 20);
+
+            // Informações do Cliente
+            const infoStartY = headerStartY + 30;
+            const orderTypeText = orderTypeSelect.options[orderTypeSelect.selectedIndex].text;
+
+            doc.setFontSize(12);
+            const margin = 14;
+            const col1X = margin;
+            const col2X = pageWidth / 2;
+            let currentY = infoStartY;
+
+            // Line 1
+            doc.setFont("helvetica", "bold").text("Pedido:", col1X, currentY);
+            doc.setFont("helvetica", "normal").text(orderNumber, col1X + 25, currentY);
+            doc.setFont("helvetica", "bold").text("Responsável:", col2X, currentY);
+            doc.setFont("helvetica", "normal").text(responsibleName, col2X + 30, currentY);
+            currentY += 7;
+
+            // Line 2
+            doc.setFont("helvetica", "bold").text("Cliente:", col1X, currentY);
+            doc.setFont("helvetica", "normal").text(clientName, col1X + 25, currentY);
+            doc.setFont("helvetica", "bold").text("WhatsApp:", col2X, currentY);
+            doc.setFont("helvetica", "normal").text(whatsappNumber, col2X + 30, currentY);
+            currentY += 7;
+
+            // Line 3
+            doc.setFont("helvetica", "bold").text("Tipo de Pedido:", col1X, currentY);
+            doc.setFont("helvetica", "normal").text(orderTypeText, col1X + 35, currentY);
+            currentY += 7;
+
+            // Line 4 (Conditional)
+            if (orderName) {
+                doc.setFont("helvetica", "bold").text("Nome do Pedido:", col1X, currentY);
+                doc.setFont("helvetica", "normal").text(orderName, col1X + 38, currentY);
+                currentY += 7;
+            }
+
+            finalY = currentY - 7;
+
+            // Resumo do Pedido
+            finalY += 10;
+            doc.setFontSize(11).setFont("helvetica", "bold").text("Resumo do Pedido:", 14, finalY);
+            finalY += 6;
+            doc.setFontSize(10).setFont("helvetica", "normal");
+
+            let totalItems = 0;
+            const sizeCounts = currentOrderItems.reduce((acc, item) => {
+                const quantity = item.quantity || 1;
+                totalItems += quantity;
+                acc[item.size] = (acc[item.size] || 0) + quantity;
+                if (item.shortSize) { // Adiciona contagem para shorts
+                    acc[item.shortSize] = (acc[item.shortSize] || 0) + quantity;
+                }
+                return acc;
+            }, {});
+            const sortedSizes = Object.keys(sizeCounts).sort((a, b) => SIZES.indexOf(a) - SIZES.indexOf(b));
+            let sizeText = sortedSizes.map(size => `${size}: ${sizeCounts[size]}`).join('  |  ');
+            doc.text(`Total de Itens: ${totalItems}`, 14, finalY);
+            finalY += 6;
+            doc.text(sizeText, 14, finalY);
+
+            // Tabela de Itens
+            const orderType = orderTypeSelect.value;
+            let tableColumn = [];
+            let tableRows = [];
+            let columnStyles = {};
+
+            const sortedItems = [...currentOrderItems].sort((a, b) => {
+                const sizeComparison = SIZES.indexOf(a.size) - SIZES.indexOf(b.size);
+                if (sizeComparison !== 0) return sizeComparison;
+                return (a.collar || '').localeCompare(b.collar || '');
+            });
+
+            switch (orderType) {
+                case 'individual':
+                    tableColumn = ["#", "Nome na Camisa", "Tamanho", "Tipo de Gola"];
+                    tableRows = sortedItems.map((item, i) => [i + 1, item.name, item.size, item.collar]);
+                    columnStyles = { 0: { cellWidth: 10 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 35 }, 3: { cellWidth: 35 } };
+                    break;
+                case 'group':
+                    tableColumn = ["#", "Descrição", "Tamanho", "Quantidade"];
+                    tableRows = sortedItems.map((item, i) => [i + 1, item.description, item.size, item.quantity]);
+                    columnStyles = { 0: { cellWidth: 10 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 35 }, 3: { cellWidth: 35 } };
+                    break;
+                case 'sports':
+                    tableColumn = ["#", "Nome", "Número (Camisa/Short)", "Tam. Camisa", "Tam. Short", "Gola"];
+                    tableRows = sortedItems.map((item, i) => [i + 1, item.name || '---', item.number, item.size, item.shortSize || 'N/A', item.collar]);
+                    columnStyles = { 0: { cellWidth: 10 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 30 }, 3: { cellWidth: 25 }, 4: { cellWidth: 25 }, 5: { cellWidth: 25 } };
+                    break;
+            }
+
+            doc.autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: finalY + 8,
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+                styles: { cellPadding: 3, fontSize: 10 },
+                columnStyles: columnStyles,
+                didDrawPage: function (data) {
+                    doc.setFontSize(8).setTextColor(100);
+                    doc.text(companyName, data.settings.margin.left, pageHeight - 10);
+                    doc.text(new Date().toLocaleDateString('pt-BR'), pageWidth / 2, pageHeight - 10, { align: 'center' });
+                    doc.text(`Página ${data.pageNumber} de ${doc.internal.getNumberOfPages()}`, pageWidth - data.settings.margin.right, pageHeight - 10, { align: 'right' });
+                }
+            });
+
+            doc.save(`Pedido_${orderNumber}_${clientName.replace(/ /g, "_")}.pdf`);
+            showMessage('PDF gerado com sucesso!', 'success');
+            clearAllData();
+        }
+
+        // --- Funções de Local Storage ---
+        function saveDataToLocalStorage() {
+            const dataToSave = {
+                clientName: clientNameInput.value,
+                orderName: orderNameInput.value,
+                responsibleName: responsibleNameInput.value,
+                whatsappNumber: whatsappNumberInput.value,
+                orderType: orderTypeSelect.value,
+                items: currentOrderItems
+            };
+            localStorage.setItem('graficaOrderData', JSON.stringify(dataToSave));
+        }
+
+        function loadDataFromLocalStorage() {
+            const savedData = localStorage.getItem('graficaOrderData');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                clientNameInput.value = data.clientName || '';
+                orderNameInput.value = data.orderName || '';
+                responsibleNameInput.value = data.responsibleName || '';
+                whatsappNumberInput.value = data.whatsappNumber || '';
+                orderTypeSelect.value = data.orderType || 'individual';
+                currentOrderItems = data.items || [];
+                switchOrderType(); // Atualiza a UI para o tipo de pedido carregado
+                renderCurrentOrder();
+                showMessage('Dados do último pedido não finalizado foram recuperados.', 'info');
+            }
+        }
+
+        function saveLastGeneratedOrder() {
+            const dataToSave = {
+                clientName: clientNameInput.value,
+                orderName: orderNameInput.value,
+                responsibleName: responsibleNameInput.value,
+                whatsappNumber: whatsappNumberInput.value,
+                orderType: orderTypeSelect.value,
+                items: currentOrderItems
+            };
+            localStorage.setItem('graficaLastGeneratedOrder', JSON.stringify(dataToSave));
+            loadLastOrderButton.classList.remove('hidden');
+        }
+
+        function loadLastGeneratedOrder() {
+            const savedData = localStorage.getItem('graficaLastGeneratedOrder');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                clientNameInput.value = data.clientName || '';
+                orderNameInput.value = data.orderName || '';
+                responsibleNameInput.value = data.responsibleName || '';
+                whatsappNumberInput.value = data.whatsappNumber || '';
+                orderTypeSelect.value = data.orderType || 'individual';
+                currentOrderItems = data.items || [];
+                switchOrderType();
+                renderCurrentOrder();
+                saveDataToLocalStorage();
+                showMessage('Último pedido gerado foi carregado para edição.', 'success');
+            } else {
+                showMessage('Nenhum pedido anterior encontrado.', 'info');
+            }
+        }
+
+        function clearAllData() {
+            clientNameInput.value = '';
+            orderNameInput.value = '';
+            responsibleNameInput.value = '';
+            whatsappNumberInput.value = '';
+            currentOrderItems = [];
+            renderCurrentOrder();
+            generateOrderNumber();
+            localStorage.removeItem('graficaOrderData');
+        }
+
+        // --- Event Listeners ---
+        addItemButton.addEventListener('click', handleAddItem);
+        currentOrderItemsTbody.addEventListener('click', handleTableActions);
+        generatePdfButton.addEventListener('click', handleGeneratePdf);
+        loadLastOrderButton.addEventListener('click', loadLastGeneratedOrder);
+        saveEditButton.addEventListener('click', handleSaveChanges);
+        cancelEditButton.addEventListener('click', closeEditModal);
+        openImportModalButton.addEventListener('click', openImportModal);
+        cancelImportButton.addEventListener('click', closeImportModal);
+        importNamesButton.addEventListener('click', handleImportNames);
+        orderTypeSelect.addEventListener('change', switchOrderType);
+
+        howToUseButton.addEventListener('click', () => howToUseModal.classList.remove('hidden'));
+        closeHowToUseModalButton.addEventListener('click', () => howToUseModal.classList.add('hidden'));
+        howToUseModal.addEventListener('click', (e) => {
+            if (e.target === howToUseModal) {
+                howToUseModal.classList.add('hidden');
+            }
+        });
+
+
+        [clientNameInput, orderNameInput, responsibleNameInput, whatsappNumberInput].forEach(input => {
+            input.addEventListener('input', saveDataToLocalStorage);
+        });
+
+        // --- Inicialização ---
+        function initializeApp() {
+            // Preenche os selects
+            const allSizeSelects = [shirtSizeSelect, groupShirtSizeSelect, sportsShirtSizeSelect, sportsShortSizeSelect, importShirtSize, importShortSize];
+            const allCollarSelects = [collarTypeSelect, sportsCollarTypeSelect, importCollarType];
+            allSizeSelects.forEach(sel => populateSelect(sel, SIZES));
+            allCollarSelects.forEach(sel => populateSelect(sel, COLLARS));
+
+            // Configurações da empresa
+            if (logoUrl) {
+                headerLogo.src = logoUrl;
+                headerLogo.classList.remove('hidden');
+            }
+            const footerCompanyName = getEl('footer-company-name');
+            const footerAddress = getEl('footer-address');
+            const footerWhatsapp = getEl('footer-whatsapp');
+            const footerPhrase = getEl('footer-phrase');
+            const developerInfoEl = getEl('developer-info');
+            if (footerCompanyName) footerCompanyName.textContent = companyName;
+            if (footerAddress) footerAddress.textContent = companyAddress;
+            if (footerWhatsapp) footerWhatsapp.textContent = `WhatsApp: ${companyWhatsapp}`;
+            if (footerPhrase) footerPhrase.textContent = `"${companyPhrase}"`;
+            if (developerInfoEl) developerInfoEl.textContent = developerInfo;
+
+            if (localStorage.getItem('graficaLastGeneratedOrder')) {
+                loadLastOrderButton.classList.remove('hidden');
+            }
+
+            generateOrderNumber();
+            loadDataFromLocalStorage(); // Carrega dados salvos, se houver
+            if (currentOrderItems.length === 0) {
+                switchOrderType(); // Se não houver itens, apenas inicializa a UI
+            }
+            renderCurrentOrder();
+        }
+
+        initializeApp();
+    </script>
+</body>
+
+</html>
